@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automatic Floor Plan Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .control-section h3::before {
+            content: "▸";
+            margin-right: 8px;
+            font-size: 1.3rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .entrance-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .entrance-btn {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            color: #555;
+        }
+
+        .entrance-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .entrance-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .stats-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .display-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .placeholder {
+            text-align: center;
+            color: #999;
+        }
+
+        .placeholder-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .placeholder-text {
+            font-size: 1.2rem;
+        }
+
+        #floorplan-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .room-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .room-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .room-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .room-details {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .download-btn {
+            margin-top: 15px;
+            width: 100%;
+            padding: 12px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Automatic Floor Plan Generator</h1>
+            <p class="subtitle">Create beautiful, Vastu-compliant floor plans with AI-powered Binary Space Partitioning</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <div class="control-section">
+                    <h3>Plot Dimensions</h3>
+                    <div style="margin-bottom: 15px;">
+                        <label for="width">Width (units)</label>
+                        <input type="number" id="width" min="15" max="100" value="30" step="1">
+                    </div>
+                    <div>
+                        <label for="height">Height (units)</label>
+                        <input type="number" id="height" min="15" max="100" value="30" step="1">
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Entrance Direction</h3>
+                    <div class="entrance-options">
+                        <button class="entrance-btn active" data-entrance="random">🎲 Random</button>
+                        <button class="entrance-btn" data-entrance="North">⬆️ North</button>
+                        <button class="entrance-btn" data-entrance="East">➡️ East</button>
+                        <button class="entrance-btn" data-entrance="West">⬅️ West</button>
+                    </div>
+                </div>
+
+                <button class="generate-btn" id="generateBtn">
+                    ✨ Generate Floor Plan
+                </button>
+
+                <div class="stats-panel" id="statsPanel" style="display: none;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">📊 Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Rooms</div>
+                            <div class="stat-value" id="totalRooms">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Total Doors</div>
+                            <div class="stat-value" id="totalDoors">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Coverage</div>
+                            <div class="stat-value" id="coverage">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Entrance</div>
+                            <div class="stat-value" id="entranceDir">-</div>
+                        </div>
+                    </div>
+
+                    <h4 style="color: #667eea; margin: 15px 0 10px 0; font-size: 0.95rem;">Room Details</h4>
+                    <div class="room-list" id="roomList"></div>
+                </div>
+            </div>
+
+            <!-- Display Panel -->
+            <div class="display-panel">
+                <div class="placeholder" id="placeholder">
+                    <div class="placeholder-icon">🏗️</div>
+                    <div class="placeholder-text">Enter dimensions and click "Generate" to create your floor plan</div>
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div>Generating your floor plan...</div>
+                </div>
+
+                <div id="imageContainer" style="display: none; width: 100%;">
+                    <img id="floorplan-image" alt="Generated Floor Plan">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                        <button class="download-btn" id="downloadBtn" style="background: #28a745;">
+                            📥 Download PNG
+                        </button>
+                        <button class="download-btn" id="downloadDxfBtn" style="background: #007bff;">
+                            📐 Download DXF
+                        </button>
+                    </div>
+                    <p style="text-align: center; margin-top: 10px; color: #666; font-size: 0.9rem;">
+                        💡 DXF files can be opened and edited in AutoCAD
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedEntrance = 'random';
+        let currentImageData = null;
+
+        // Entrance button selection
+        document.querySelectorAll('.entrance-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.entrance-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                selectedEntrance = this.dataset.entrance;
+            });
+        });
+
+        // Generate button
+        document.getElementById('generateBtn').addEventListener('click', async function() {
+            const width = parseFloat(document.getElementById('width').value);
+            const height = parseFloat(document.getElementById('height').value);
+
+            if (width < 15 || height < 15 || width > 100 || height > 100) {
+                alert('Please enter dimensions between 15 and 100 units');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('placeholder').style.display = 'none';
+            document.getElementById('imageContainer').style.display = 'none';
+            document.getElementById('loading').classList.add('active');
+            this.disabled = true;
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        width: width,
+                        height: height,
+                        entrance: selectedEntrance
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Display image
+                    currentImageData = data.image;
+                    document.getElementById('floorplan-image').src = data.image;
+                    document.getElementById('imageContainer').style.display = 'block';
+
+                    // Update statistics
+                    document.getElementById('totalRooms').textContent = data.stats.total_rooms;
+                    document.getElementById('totalDoors').textContent = data.stats.total_doors;
+                    document.getElementById('coverage').textContent = data.stats.coverage + '%';
+                    document.getElementById('entranceDir').textContent = data.entrance;
+
+                    // Update room list
+                    const roomList = document.getElementById('roomList');
+                    roomList.innerHTML = '';
+                    data.stats.rooms.forEach(room => {
+                        const roomItem = document.createElement('div');
+                        roomItem.className = 'room-item';
+                        roomItem.innerHTML = `
+                            <div class="room-name">${room.name}</div>
+                            <div class="room-details">
+                                Area: ${room.area} sq units | ${room.width} × ${room.height}
+                            </div>
+                        `;
+                        roomList.appendChild(roomItem);
+                    });
+
+                    document.getElementById('statsPanel').style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error generating floor plan: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+                this.disabled = false;
+            }
+        });
+
+        // Download PNG button
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (currentImageData) {
+                const link = document.createElement('a');
+                link.href = currentImageData;
+                link.download = 'floor-plan-' + Date.now() + '.png';
+                link.click();
+            }
+        });
+
+        // Download DXF button
+        document.getElementById('downloadDxfBtn').addEventListener('click', async function() {
+            try {
+                this.disabled = true;
+                this.textContent = '⏳ Generating DXF...';
+                
+                const response = await fetch('/download_dxf');
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'floor-plan-' + Date.now() + '.dxf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                    
+                    this.textContent = '✅ Downloaded!';
+                    setTimeout(() => {
+                        this.textContent = '📐 Download DXF';
+                        this.disabled = false;
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to generate DXF'));
+                    this.textContent = '📐 Download DXF';
+                    this.disabled = false;
+                }
+            } catch (error) {
+                alert('Error downloading DXF: ' + error.message);
+                this.textContent = '📐 Download DXF';
+                this.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
